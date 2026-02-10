@@ -1,0 +1,249 @@
+{
+  "visualization_strategies": {
+    "chart_recommendation_engine": {
+      "description": "Automatically suggest optimal chart types based on question intent and data structure",
+      "algorithm": [
+        "1. Parse user question for keyword intent (distribution, trend, comparison, correlation)",
+        "2. Analyze data dimensions (categorical vs numeric columns, row count)",
+        "3. Match keywords to chart types",
+        "4. Validate data structure compatibility",
+        "5. Recommend primary + secondary charts"
+      ]
+    },
+    "distribution_visualization": {
+      "use_cases": [
+        "Market share breakdowns (Pie chart)",
+        "Category composition (Donut chart)",
+        "Segment distribution (Bar with grouping)"
+      ],
+      "keywords": ["distribution", "share", "composition", "breakdown", "percentage"],
+      "optimal_charts": ["pie", "donut", "sunburst"],
+      "data_requirements": {
+        "minimum_columns": 2,
+        "required_types": ["categorical", "numeric"]
+      }
+    },
+    "comparison_visualization": {
+      "use_cases": [
+        "Technology ARPU ranking",
+        "Geographic performance",
+        "Segment metrics comparison",
+        "Top-N rankings"
+      ],
+      "keywords": ["compare", "comparison", "vs", "versus", "top", "best", "worst", "ranking"],
+      "optimal_charts": ["bar", "column", "horizontal_bar"],
+      "recommendations": {
+        "sort": "descending by value",
+        "limit": "top 15 items",
+        "highlight": "top performer",
+        "annotation": "include values on bars"
+      }
+    },
+    "trend_visualization": {
+      "use_cases": [
+        "ARPU over time",
+        "Subscriber growth trajectory",
+        "Revenue progression",
+        "Seasonal patterns"
+      ],
+      "keywords": ["trend", "over time", "growth", "decline", "progress", "forecast", "historical"],
+      "optimal_charts": ["line", "area", "combo"],
+      "requirements": {
+        "x_axis": "must be temporal (date, month, year)",
+        "y_axis": "metric to track",
+        "markers": true,
+        "forecast": "optional for future values"
+      }
+    },
+    "correlation_visualization": {
+      "use_cases": [
+        "ARPU vs tenure relationship",
+        "Price vs quantity correlation",
+        "Age vs revenue analysis",
+        "Outlier detection"
+      ],
+      "keywords": ["correlation", "relationship", "vs", "scatter", "pattern", "outlier"],
+      "optimal_charts": ["scatter", "bubble", "heatmap"],
+      "enhancements": {
+        "size": "third dimension as bubble size",
+        "color": "fourth dimension as color intensity",
+        "trend_line": "show correlation strength",
+        "regression": "linear or polynomial fit"
+      }
+    },
+    "distribution_box_visualization": {
+      "use_cases": [
+        "Value distribution by category",
+        "Outlier analysis",
+        "Quartile comparison",
+        "Statistical summary"
+      ],
+      "keywords": ["distribution", "spread", "outlier", "quartile", "median"],
+      "optimal_charts": ["box", "violin", "histogram"],
+      "insights": [
+        "Show median, quartiles, outliers",
+        "Highlight skewness",
+        "Identify edge cases"
+      ]
+    },
+    "performance_kpi_visualization": {
+      "use_cases": [
+        "Churn rate gauge",
+        "Performance score",
+        "Target achievement %",
+        "Risk level indicator"
+      ],
+      "keywords": ["risk", "performance", "score", "achievement", "target", "kpi", "gauge"],
+      "optimal_charts": ["gauge", "indicator", "trendline"],
+      "design": {
+        "scale": "0-100 or custom range",
+        "zones": ["good", "warning", "bad"],
+        "delta": "show change from previous period",
+        "annotation": "target line or benchmark"
+      }
+    }
+  },
+  "visualization_best_practices": {
+    "data_density": {
+      "sparse_data": {
+        "threshold": "< 10 rows",
+        "recommendation": "Use table or simple bar chart",
+        "avoid": ["scatter plots", "heatmaps"]
+      },
+      "normal_data": {
+        "threshold": "10-500 rows",
+        "recommendation": "Use standard charts (bar, line, pie)",
+        "optimize": "Group similar values"
+      },
+      "dense_data": {
+        "threshold": "> 500 rows",
+        "recommendation": "Use aggregated views or heatmaps",
+        "aggregate": "GROUP BY top categories"
+      }
+    },
+    "color_strategy": {
+      "single_metric": "Sequential color scale (light to dark)",
+      "two_metrics": "Two-color diverging scale",
+      "categorical": "Distinct colors per category",
+      "accessibility": "ColorBlind-friendly palettes"
+    },
+    "annotation_strategy": {
+      "bar_charts": "Show values on top of bars",
+      "line_charts": "Add markers and data labels at key points",
+      "pie_charts": "Show percentages inside slices",
+      "scatter": "Highlight outliers and clusters"
+    },
+    "interactive_features": {
+      "hover": "Show full details on mouseover",
+      "zoom": "Allow exploration of dense data",
+      "filter": "Enable dynamic slicing",
+      "export": "Download as PNG or CSV"
+    }
+  },
+  "ai_insights_with_visuals": {
+    "pattern_recognition": {
+      "trend_detection": {
+        "signal": "Line chart shows consistent upward/downward trajectory",
+        "insight_template": "Revenue {trend} {percentage}% over {period}",
+        "recommendation": "Identify root cause and replicate success"
+      },
+      "outlier_detection": {
+        "signal": "Scatter or box plot shows extreme values",
+        "insight_template": "{entity} is {direction} outlier ({std_devs} σ from mean)",
+        "recommendation": "Investigate anomaly or opportunity"
+      },
+      "concentration_analysis": {
+        "signal": "Pie chart shows heavy concentration (>70% top segment)",
+        "insight_template": "Revenue concentrated in {segment} ({percentage}%)",
+        "recommendation": "Diversify to reduce risk"
+      },
+      "gap_analysis": {
+        "signal": "Bar chart shows significant performance gap",
+        "insight_template": "Gap between top ({high}) and bottom ({low}): {difference}",
+        "recommendation": "Lift underperformers to close gap"
+      }
+    },
+    "actionable_recommendations": {
+      "revenue_growth": {
+        "visualization": "ARPU comparison bar chart",
+        "insight": "Technology X has {percentage}% higher ARPU",
+        "action": "Migrate users from lower-ARPU tech"
+      },
+      "churn_prevention": {
+        "visualization": "Risk distribution pie + trend line",
+        "insight": "At-risk segment growing {percentage}% MoM",
+        "action": "Launch retention campaign for at-risk cohorts"
+      },
+      "geographic_expansion": {
+        "visualization": "Map or geographic bar chart",
+        "insight": "Rural ARPU {percentage}% below urban",
+        "action": "Target rural with value offerings"
+      },
+      "demographic_targeting": {
+        "visualization": "Age/gender pyramid with ARPU overlay",
+        "insight": "25-34 age group has highest ARPU",
+        "action": "Tailor products for prime demographic"
+      }
+    }
+  },
+  "visualization_qa_validation": {
+    "checks": [
+      {
+        "check": "Data completeness",
+        "validation": "No missing x or y axis values",
+        "action": "Filter null rows before visualization"
+      },
+      {
+        "check": "Scale appropriateness",
+        "validation": "Y-axis range makes sense for data",
+        "action": "Auto-scale or set custom range"
+      },
+      {
+        "check": "Label clarity",
+        "validation": "All axes labeled, units specified",
+        "action": "Add currency symbol, percentages as needed"
+      },
+      {
+        "check": "Color contrast",
+        "validation": "Text visible on background",
+        "action": "Use high-contrast color schemes"
+      },
+      {
+        "check": "Performance",
+        "validation": "Charts render in <2 seconds",
+        "action": "Aggregate dense data or paginate"
+      }
+    ]
+  },
+  "ai_chart_narration": {
+    "template": {
+      "observation": "What the chart shows visually",
+      "insight": "What it means for business",
+      "recommendation": "What action to take",
+      "supporting_metrics": "Key numbers to reference"
+    },
+    "examples": [
+      {
+        "chart_type": "bar",
+        "observation": "FTTH ARPU significantly higher than other technologies",
+        "insight": "FTTH customers generate 40% more revenue per user",
+        "recommendation": "Accelerate FTTH migration across subscriber base",
+        "metric": "FTTH avg ARPU ₵180 vs LTE ₵120"
+      },
+      {
+        "chart_type": "pie",
+        "observation": "Stability distribution heavily weighted toward Stable",
+        "insight": "Majority of base is healthy, minority at churn risk",
+        "recommendation": "Maintain service quality for Stable, intervene for At-Risk",
+        "metric": "Stable: 65%, At-Risk: 30%, Churner: 5%"
+      },
+      {
+        "chart_type": "line",
+        "observation": "ARPU trending upward with seasonal peaks",
+        "insight": "Revenue growth sustained, with predictable seasonality",
+        "recommendation": "Plan inventory/staffing around seasonal peaks",
+        "metric": "MoM growth: +2.5% average"
+      }
+    ]
+  }
+}

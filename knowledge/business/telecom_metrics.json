@@ -1,0 +1,83 @@
+{
+  "metrics": {
+    "ARPU": {
+      "name": "Average Revenue Per User",
+      "formula": "Total Revenue / Active Subscribers",
+      "unit": "EGP",
+      "business_value": "Primary profitability indicator",
+      "thresholds": {
+        "high": "> 150",
+        "normal": "100-150",
+        "low": "< 100"
+      },
+      "dimension_breakdown": [
+        "By Technology (FTTH has highest ARPU)",
+        "By Geography (Urban > Suburban > Rural)",
+        "By Stability (Stable > At-Risk > Churner)",
+        "By Age Group (working-age highest)"
+      ]
+    },
+    "Churn_Risk": {
+      "name": "Subscriber Churn Probability",
+      "indicators": [
+        "Stability_Name = 'At-Risk'",
+        "Line_Stable = 'Suspended' (3+ months)",
+        "Tenure_Days < 60 AND Avg_Monthly_Payment = 0",
+        "ARPU declining YoY"
+      ],
+      "business_value": "Identifies at-risk customers for retention campaigns",
+      "action_threshold": "P(churn) > 0.3"
+    },
+    "Technology_Migration": {
+      "name": "Technology Upgrade Opportunity",
+      "indicators": [
+        "Current_Technology != 'FTTH' AND available_FTTH = true",
+        "Tenure_Days > 365",
+        "Stability_Name = 'Stable'"
+      ],
+      "business_value": "FTTH subscribers have 40% higher ARPU",
+      "target_segment": "Stable, long-tenure non-FTTH subscribers"
+    },
+    "Stability_Classification": {
+      "name": "Subscriber Lifecycle Stage",
+      "categories": {
+        "Stable": "Active, consistent revenue, low churn risk (<5%)",
+        "At-Risk": "Declining activity/revenue, medium churn risk (20-40%)",
+        "Churner": "Inactive or suspended, high churn risk (>60%)",
+        "Prospect": "New subscriber, tenure < 180 days"
+      },
+      "business_value": "Segment for targeted engagement strategies"
+    },
+    "Revenue_Concentration": {
+      "name": "Dependency on Top Segments",
+      "calculation": "% Revenue from top 20% of subscribers",
+      "threshold_alert": "> 70% (concentration risk)",
+      "business_value": "Identify over-reliance on premium segments"
+    }
+  },
+  "business_rules": {
+    "data_quality": [
+      "ARPU must be positive and <= 1000",
+      "Tenure_Days cannot be negative",
+      "age must be 18-100",
+      "Subscriber_Status must match Line_Stable values"
+    ],
+    "calculation_rules": [
+      "Always use latest Insertion_Date (ROW_NUMBER() DESC)",
+      "Filter WHERE Subscriber_Status IS NOT NULL",
+      "ARPU trends: compare same period YoY"
+    ],
+    "reporting_rules": [
+      "Always break down by Current_Technology",
+      "Geography analysis: GOV (Governorate level)",
+      "Population segment: Urban/Suburban/Rural",
+      "Always include sample size in percentages"
+    ]
+  },
+  "definitions": {
+    "retention_rate": "% of customers from previous period still active",
+    "growth_rate": "YoY or MoM percentage change in subscriber count",
+    "ltv": "Lifetime Value = Average Revenue Per User * Average Customer Lifetime",
+    "nps": "Net Promoter Score (industry benchmark: 40-50)"
+  }
+}

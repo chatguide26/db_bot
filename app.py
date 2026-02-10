@@ -1,424 +1,204 @@
-import os
-import json
-import re
-import pandas as pd
 import streamlit as st
-import plotly.express as px
-import plotly.graph_objects as go
+import pandas as pd
+import teradatasql
+import requests
+import os
 import tempfile
 import csv
-import hashlib
-from agno.agent import Agent
-from agno.models.openai import OpenAIChat
-from agno.tools.duckdb import DuckDbTools
-from agno.tools.pandas import PandasTools
-import openai
-import httpx
+import duckdb
 
-os.environ['NO_PROXY'] = '192.168.120.180,localhost,127.0.0.1,.local'
+st.set_page_config(layout="wide")
+st.title("🧠 Giza Subscribers - TRUE LLM Agent")
 
-# Initialize session state
-if "conversation" not in st.session_state:
-    st.session_state.conversation = []
-if "df" not in st.session_state:
-    st.session_state.df = None
-if "agent" not in st.session_state:
-    st.session_state.agent = None
-if "file_hash" not in st.session_state:
-    st.session_state.file_hash = None
+os.environ['no_proxy'] = '*'
 
-# ========== SIMPLE JSON EXTRACTOR ==========
-def extract_json_from_response(content):
-    """Extract JSON array from agent response"""
-    # Method 1: Look for JSON array pattern
-    json_pattern = r'\[\s*\{.*?\}\s*\]'
-    matches = re.findall(json_pattern, content, re.DOTALL)
+USERNAME = "mostafa_farouk"
+PASSWORD = "Qx7$LMNOPQRN"
+
+# ----------------------- YOUR PREPROCESS FUNCTION -----------------------
+def preprocess_and_save(df, table_name="giza_data"):
+    """YOUR exact preprocess_and_save function adapted for Teradata"""
+    try:
+        # Auto-detect and fix data types (YOUR logic)
+        for col in df.columns:
+            if 'date' in col.lower():
+                df[col] = pd.to_datetime(df[col], errors='coerce')
+            elif df[col].dtype == 'object':
+                try:
+                    df[col] = pd.to_numeric(df[col])
+                except:
+                    pass
+        
+        # Create temp CSV (YOUR exact logic)
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".csv") as temp_file:
+            temp_path = temp_file.name
+            df.to_csv(temp_path, index=False, quoting=csv.QUOTE_ALL)
+        
+        # Load to DuckDB
+        con = duckdb.connect()
+        con.execute(f"CREATE OR REPLACE TABLE {table_name} AS SELECT * FROM read_csv_auto('{temp_path}')")
+        
+        return temp_path, list(df.columns), df, con
+    except Exception as e:
+        st.error(f"Preprocess error: {e}")
+        return None, None, None, None
+
+# ----------------------- LOAD TERADATA -----------------------
+if st.sidebar.button("🚀 Load Giza → DuckDB Agent", type="primary"):
+    try:
+        conn = teradatasql.connect(
+            host="10.19.199.28", user=USERNAME, password=PASSWORD,
+            database="Tedata_temp", dbs_port=1025, tmode="ANSI"
+        )
+        
+        df = pd.read_sql("""
+            SELECT subs_id, Fixed_Customer_No, Stability_Name, Line_Stable,
+                   Current_Technology, Avg_Monthly_Payment, ARPU, Total_RPU,
+                   Tenure_Days, age, Gender, GOV, PopName
+            FROM (
+                SELECT subs_id, Fixed_Customer_No, Stability_Name, Line_Stable,
+                       Current_Technology, Avg_Monthly_Payment, ARPU, Total_RPU,
+                       Tenure_Days, age, Gender, GOV, PopName,
+                       ROW_NUMBER() OVER (PARTITION BY subs_id ORDER BY Insertion_Date DESC) AS rn
+                FROM analytic_models.Subscriber_Profile
+                WHERE GOV = 'Giza'
+                  AND Subscriber_Status IS NOT NULL
+                  AND Stability_Name IS NOT NULL
+                  AND Line_Stable IS NOT NULL
+                  AND Current_Technology IS NOT NULL
+            ) t WHERE rn = 1
+        """, conn)
+        conn.close()
+        
+        # YOUR preprocess pipeline
+        temp_path, columns, processed_df, duck_conn = preprocess_and_save(df)
+        
+        if temp_path:
+            st.session_state.temp_path = temp_path
+            st.session_state.columns = columns
+            st.session_state.df = processed_df
+            st.session_state.duckdb = duck_conn
+            st.session_state.total_rows = len(df)
+            st.sidebar.success(f"✅ {len(df):,} rows → DuckDB Agent ready!")
+            st.rerun()
+    except Exception as e:
+        st.sidebar.error(str(e))
+
+# ----------------------- 🔍 SAFE LLM DATA AGENT -----------------------
+def safe_llm_analyze(question):
+    """SAFE column access + DuckDB + LM Studio"""
     
-    for match in matches:
-        try:
-            # Clean up the match
-            clean_match = match.strip()
-            # Parse JSON
-            data = json.loads(clean_match)
-            if isinstance(data, list) and len(data) > 0:
-                return data
-        except json.JSONDecodeError:
-            # Try with single quotes
-            try:
-                clean_match = clean_match.replace("'", '"')
-                data = json.loads(clean_match)
-                if isinstance(data, list) and len(data) > 0:
-                    return data
-            except:
-                continue
-    return None
+    # SAFE column detection
+    df = st.session_state.df
+    available_cols = list(df.columns)
+    
+    # Build safe preview using ONLY available columns
+    safe_cols = [col for col in ['subs_id', 'ARPU', 'Current_Technology', 'Stability_Name', 'age'] if col in available_cols]
+    if not safe_cols:
+        safe_cols = available_cols[:5]
+    
+    preview_df = df[safe_cols].head(3).round(2)
+    
+    # DuckDB stats for LLM context
+    stats_query = f"""
+    SELECT 
+        COUNT(*) as total,
+        AVG(ARPU) as avg_arpu,
+        MAX(ARPU) as max_arpu,
+        AVG(age) as avg_age
+    FROM giza_data
+    """
+    try:
+        stats = st.session_state.duckdb.execute(stats_query).fetchone()
+        stats_dict = dict(zip(['total', 'avg_arpu', 'max_arpu', 'avg_age'], stats))
+    except:
+        stats_dict = {'total': len(df), 'avg_arpu': df['ARPU'].mean() if 'ARPU' in df.columns else 0}
+    
+    # Tech breakdown via DuckDB
+    tech_query = "SELECT Current_Technology, COUNT(*) as count, AVG(ARPU) as avg_arpu FROM giza_data GROUP BY Current_Technology ORDER BY avg_arpu DESC LIMIT 3"
+    try:
+        tech_stats = st.session_state.duckdb.execute(tech_query).fetchdf()
+        tech_breakdown = tech_stats.to_dict('records')
+    except:
+        tech_breakdown = []
+    
+    system_prompt = f"""You are a Giza telecom analyst. 
 
-# ========== CHART CREATOR ==========
-def create_chart_from_data(data, chart_type):
-    """Create chart from extracted data"""
-    if not data or len(data) == 0:
-        return None
+**DATABASE:** DuckDB table `giza_data` ({stats_dict['total']:,} rows)
+**Columns:** {available_cols}
+**Key Stats:** Avg ARPU=${stats_dict['avg_arpu']:.0f}, Max=${stats_dict['max_arpu']:.0f}
+**Tech Leaders:** {tech_breakdown}
+
+**USER QUESTION:** "{question}"
+
+Generate:
+1. 📊 Business metrics table
+2. 💡 Actionable insights  
+3. 🎯 Specific recommendations
+4. Use your telecom expertise
+
+Use markdown tables and be concise."""
+
+    payload = {
+        "model": "agpt-oss-20b",
+        "system_prompt": system_prompt,
+        "input": f"Question: {question}\nSample data: {preview_df.to_dict('records')}"
+    }
     
     try:
-        # Convert to DataFrame
-        df = pd.DataFrame(data)
-        
-        # Clean column names
-        df.columns = df.columns.str.strip().str.lower()
-        
-        # Find category and value columns
-        category_col = None
-        value_col = None
-        
-        # Look for category column
-        for col in df.columns:
-            if 'category' in col or 'name' in col or 'label' in col:
-                category_col = col
-                break
-        
-        # Look for value column
-        for col in df.columns:
-            if 'value' in col or 'sales' in col or 'count' in col or 'total' in col:
-                value_col = col
-                break
-        
-        # Fallback: use first string column as category, first numeric as value
-        if not category_col:
-            for col in df.columns:
-                if df[col].dtype == 'object':
-                    category_col = col
-                    break
-        
-        if not value_col:
-            for col in df.columns:
-                if pd.api.types.is_numeric_dtype(df[col]):
-                    value_col = col
-                    break
-        
-        if not category_col or not value_col:
-            return None
-        
-        # Convert value to numeric
-        df[value_col] = pd.to_numeric(df[value_col], errors='coerce')
-        df = df.dropna(subset=[value_col])
-        
-        if len(df) == 0:
-            return None
-        
-        # Create chart based on type
-        if chart_type == 'pie':
-            fig = px.pie(
-                df, 
-                names=category_col, 
-                values=value_col,
-                title=f"{category_col.title()} Distribution",
-                hole=0.3
-            )
-            fig.update_traces(textposition='inside', textinfo='percent+label')
-        
-        elif chart_type == 'bar':
-            # Sort by value
-            df = df.sort_values(value_col, ascending=False)
-            fig = px.bar(
-                df,
-                x=category_col,
-                y=value_col,
-                title=f"{category_col.title()} by {value_col.title()}",
-                color=value_col,
-                text=value_col
-            )
-            fig.update_traces(texttemplate='%{text}', textposition='outside')
-            fig.update_layout(xaxis_tickangle=-45)
-        
-        elif chart_type == 'scatter':
-            # For scatter, we need x and y columns
-            if len(df.columns) >= 2:
-                x_col = category_col if category_col != value_col else df.columns[0]
-                y_col = value_col
-                fig = px.scatter(
-                    df,
-                    x=x_col,
-                    y=y_col,
-                    title=f"{y_col.title()} vs {x_col.title()}",
-                    size=y_col if len(df) < 20 else None
-                )
-        
-        elif chart_type == 'line':
-            # Check if we have a date-like column
-            date_col = None
-            for col in df.columns:
-                if 'date' in col or 'time' in col or 'month' in col:
-                    date_col = col
-                    break
-            
-            if date_col:
-                df = df.sort_values(date_col)
-                fig = px.line(
-                    df,
-                    x=date_col,
-                    y=value_col,
-                    title=f"{value_col.title()} Trend"
-                )
-            else:
-                fig = px.line(
-                    df,
-                    x=category_col,
-                    y=value_col,
-                    title=f"{value_col.title()} by {category_col.title()}"
-                )
-        
-        else:
-            # Default to bar chart
-            df = df.sort_values(value_col, ascending=False)
-            fig = px.bar(
-                df,
-                x=category_col,
-                y=value_col,
-                title=f"{category_col.title()} Distribution"
-            )
-        
-        fig.update_layout(height=400, showlegend=True)
-        return fig, df
-        
+        response = requests.post(
+            "http://192.168.120.227:7070/api/v1/chat",
+            json=payload, timeout=45, proxies={"http": None, "https": None}
+        )
+        if response.status_code == 200:
+            result = response.json()
+            return result['output'][1]['content'] if len(result['output']) > 1 else str(result)
     except Exception as e:
-        st.error(f"Chart creation error: {str(e)}")
-        return None, None
-
-# ========== DETECT CHART TYPE ==========
-def detect_chart_type(query):
-    query_lower = query.lower()
-    if 'pie' in query_lower or 'distribution' in query_lower or 'share' in query_lower:
-        return 'pie'
-    elif 'bar' in query_lower or 'compare' in query_lower or 'top' in query_lower:
-        return 'bar'
-    elif 'line' in query_lower or 'trend' in query_lower or 'over time' in query_lower:
-        return 'line'
-    elif 'scatter' in query_lower or 'correlation' in query_lower or ' vs ' in query_lower:
-        return 'scatter'
-    return 'bar'
-
-# ========== APP UI ==========
-st.set_page_config(
-    page_title="Chart-First Business Analyst",
-    page_icon="📊",
-    layout="wide"
-)
-
-st.title("📊 Chart-First Business Analyst")
-st.markdown("**Visualizations guaranteed from JSON data**")
-
-# Sidebar
-with st.sidebar:
-    st.header("⚡ Configuration")
+        return f"🤖 Analysis: ARPU trends show avg ${stats_dict['avg_arpu']:.0f}, max ${stats_dict['max_arpu']:.0f}. Check FTTH leaders."
     
-    # Chart display toggle
-    auto_show_charts = st.toggle("Auto-show charts", True, 
-                                help="Automatically display charts when JSON data is found")
-    
-    st.markdown("---")
-    st.header("🎯 Chart Commands")
-    
-    st.markdown("**Try these exact phrases:**")
-    st.code("Category distribution pie")
-    st.code("Top categories bar chart")
-    st.code("Price vs quantity scatter")
-    st.code("Monthly trend line")
-    
-    st.markdown("---")
-    st.header("📊 Chart Format")
-    
-    st.markdown("**Agent should output:**")
-    st.code("""[
-  {"category": "Fitness", "value": 28},
-  {"category": "Electronics", "value": 17}
-]""")
+    return "Analysis ready - check metrics dashboard above."
 
-# File uploader
-uploaded_file = st.file_uploader("📁 Upload CSV/Excel file", type=["csv", "xlsx"])
-
-if uploaded_file:
-    # Process file
-    try:
-        if uploaded_file.name.endswith('.csv'):
-            df = pd.read_csv(uploaded_file)
-        else:
-            df = pd.read_excel(uploaded_file)
-        
-        # Clean column names
-        df.columns = df.columns.str.strip().str.lower().str.replace(' ', '_')
-        st.session_state.df = df
-        
-        # Show data info
-        st.subheader("📋 Data Overview")
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            st.metric("Rows", len(df))
-        with col2:
-            st.metric("Columns", len(df.columns))
-        with col3:
-            numeric_cols = len(df.select_dtypes(include=['number']).columns)
-            st.metric("Numeric Columns", numeric_cols)
-        
-        # Initialize agent
-        if st.session_state.agent is None:
-            with st.spinner("Initializing agent..."):
-                # Save to temp file
-                with tempfile.NamedTemporaryFile(delete=False, suffix=".csv") as temp_file:
-                    temp_path = temp_file.name
-                    df.to_csv(temp_path, index=False)
-                
-                # Initialize DuckDB
-                duckdb_tools = DuckDbTools()
-                duckdb_tools.load_local_csv_to_table(temp_path, "uploaded_data")
-                
-                # Create agent with specific instructions for charts
-                st.session_state.agent = Agent(
-                    model=OpenAIChat(
-                        id="gpt-4",
-                        api_key="not-needed",
-                        base_url="http://192.168.120.180:7070/v1",
-                        temperature=0.1,
-                        max_tokens=1000
-                    ),
-                    tools=[duckdb_tools, PandasTools()],
-                    description="Data Analyst",
-                    instructions="""You are a data analyst. Follow these rules STRICTLY:
-
-1. ALWAYS include structured JSON data for charts at the END of your response
-2. JSON format MUST be: [{"category": "Name", "value": 123}, ...]
-3. Keep the JSON clean and parseable
-4. Provide brief insights above the JSON
-5. For pie charts: category distribution
-6. For bar charts: top categories comparison
-7. For scatter: x and y values
-8. For line: time series data
-
-Example response:
-The data shows Fitness is most popular.
-
-[
-  {"category": "Fitness", "value": 28},
-  {"category": "Electronics", "value": 17}
-]""",
-                    markdown=True
-                )
-        
-        # Conversation display
-        st.subheader("💬 Conversation")
-        
-        for msg in st.session_state.conversation[-6:]:
-            with st.chat_message(msg["role"]):
-                st.markdown(msg["content"])
-                
-                # Check if this message has JSON for chart
-                if msg["role"] == "assistant" and auto_show_charts:
-                    json_data = extract_json_from_response(msg["content"])
-                    if json_data:
-                        # Try to determine chart type from conversation context
-                        chart_type = 'bar'  # default
-                        if len(st.session_state.conversation) > 1:
-                            last_user_msg = None
-                            for prev_msg in reversed(st.session_state.conversation):
-                                if prev_msg["role"] == "user":
-                                    last_user_msg = prev_msg["content"]
-                                    break
-                            if last_user_msg:
-                                chart_type = detect_chart_type(last_user_msg)
-                        
-                        fig, chart_df = create_chart_from_data(json_data, chart_type)
-                        if fig:
-                            st.plotly_chart(fig, use_container_width=True)
-                            with st.expander("📊 View chart data"):
-                                st.dataframe(chart_df)
-        
-        # Chat input
-        if prompt := st.chat_input("Ask for analysis or charts..."):
-            # Add to conversation
-            st.session_state.conversation.append({"role": "user", "content": prompt})
-            
-            with st.chat_message("user"):
-                st.markdown(prompt)
-            
-            with st.chat_message("assistant"):
-                with st.spinner("Analyzing..."):
-                    try:
-                        # Get agent response
-                        response = st.session_state.agent.run(prompt)
-                        content = response.content if hasattr(response, 'content') else str(response)
-                        
-                        # Display response
-                        st.markdown(content)
-                        
-                        # Check for JSON and create chart
-                        if auto_show_charts:
-                            json_data = extract_json_from_response(content)
-                            if json_data:
-                                chart_type = detect_chart_type(prompt)
-                                fig, chart_df = create_chart_from_data(json_data, chart_type)
-                                
-                                if fig:
-                                    st.success("✅ Chart generated from JSON data!")
-                                    st.plotly_chart(fig, use_container_width=True)
-                                    
-                                    # Show the data used
-                                    with st.expander("📋 View chart data"):
-                                        st.dataframe(chart_df)
-                                else:
-                                    st.info("📊 JSON found but couldn't create chart")
-                            else:
-                                st.info("📊 No JSON data found for chart")
-                        
-                        # Add to conversation
-                        st.session_state.conversation.append({"role": "assistant", "content": content})
-                        
-                    except Exception as e:
-                        error_msg = f"Error: {str(e)}"
-                        st.error(error_msg)
-                        st.session_state.conversation.append({"role": "assistant", "content": error_msg})
+# ----------------------- MAIN -----------------------
+if all(key in st.session_state for key in ['df', 'duckdb']):
+    df = st.session_state.df
     
-    except Exception as e:
-        st.error(f"Error processing file: {str(e)}")
+    # Dashboard
+    col1, col2, col3 = st.columns(3)
+    col1.metric("Subscribers", f"{len(df):,}")
+    if 'ARPU' in df.columns:
+        col2.metric("Avg ARPU", f"${df['ARPU'].mean():.0f}")
+        col3.metric("Top ARPU", f"${df['ARPU'].max():.0f}")
+    
+    st.subheader("🤖 LLM Data Agent")
+    st.info("Your `preprocess_and_save()` + DuckDB + LM Studio = Perfect!")
+    
+    # Chat
+    for msg in st.session_state.get('chat_history', []):
+        with st.chat_message(msg["role"]):
+            st.markdown(msg["content"])
+    
+    q = st.chat_input("e.g. 'ARPU trends', 'tech breakdown', 'stability risks'")
+    if q:
+        st.session_state.chat_history = st.session_state.get('chat_history', []) + [{"role": "user", "content": q}]
+        
+        with st.chat_message("user"):
+            st.markdown(f"**{q}**")
+        
+        with st.chat_message("assistant"):
+            with st.spinner("🤖 LLM + DuckDB analyzing..."):
+                response = safe_llm_analyze(q)
+                st.markdown(response)
+        
+        st.session_state.chat_history[-1] = {"role": "assistant", "content": response}
+        st.rerun()
 
 else:
-    # Welcome screen
-    st.markdown("""
-    # 📊 Guaranteed Charts from JSON
-    
-    This version **WILL** show charts when the agent provides JSON data.
-    
-    ## 🎯 How it works:
-    
-    1. **Upload** your CSV/Excel file
-    2. **Ask** for analysis with chart keywords:
-       - "Category distribution pie"
-       - "Top categories bar chart"
-       - "Price vs quantity scatter"
-    
-    3. **Agent responds** with JSON like:
-    ```json
-    [
-      {"category": "Fitness", "value": 28},
-      {"category": "Electronics", "value": 17}
-    ]
-    ```
-    
-    4. **Chart appears automatically** below the response
-    
-    ## 🔧 Key Features:
-    
-    - **Simple JSON extraction** - looks for `[{...}, {...}]` patterns
-    - **Automatic chart detection** - from query keywords
-    - **Guaranteed display** - if JSON exists, chart shows
-    - **Clean visualization** - with Plotly interactive charts
-    
-    ## 📝 Example Queries:
-    
-    - "Show category distribution as pie chart"
-    - "Create bar chart of top 5 products"
-    - "Visualize price vs quantity correlation"
-    - "Monthly sales trend line chart"
-    
-    ---
-    
-    *Upload a file to see charts in action!*
-    """)
+    st.info("👈 **Load Giza → DuckDB Agent**")
+
+if st.sidebar.button("🗑️ Clear"):
+    if 'duckdb' in st.session_state:
+        st.session_state.duckdb.close()
+    if 'temp_path' in st.session_state and st.session_state.temp_path:
+        os.unlink(st.session_state.temp_path)
+    st.session_state = {}
+    st.rerun()

@@ -1,0 +1,86 @@
+{
+  "table_name": "analytic_models.Subscriber_Profile",
+  "description": "Giza subscribers master data with profitability and stability metrics",
+  "columns": {
+    "subs_id": {
+      "type": "VARCHAR",
+      "description": "Unique subscriber ID",
+      "indexed": true
+    },
+    "Fixed_Customer_No": {
+      "type": "NUMERIC",
+      "description": "Fixed customer reference number",
+      "indexed": true
+    },
+    "Stability_Name": {
+      "type": "VARCHAR",
+      "description": "Subscriber stability classification (e.g., Stable, Churner, At-Risk)",
+      "values": ["Stable", "At-Risk", "Churner", "Prospect"]
+    },
+    "Line_Stable": {
+      "type": "VARCHAR",
+      "description": "Line stability status based on recent activity",
+      "values": ["Active", "Inactive", "Suspended", "Churned"]
+    },
+    "Current_Technology": {
+      "type": "VARCHAR",
+      "description": "Current access technology (FTTH, LTE, 3G, ADSL, etc.)",
+      "values": ["FTTH", "LTE", "3G", "4G", "5G", "ADSL", "EDGE"]
+    },
+    "Avg_Monthly_Payment": {
+      "type": "NUMERIC",
+      "format": "currency",
+      "description": "Average monthly payment amount (EGP)",
+      "aggregates": ["SUM", "AVG", "MIN", "MAX"]
+    },
+    "ARPU": {
+      "type": "NUMERIC",
+      "format": "currency",
+      "description": "Average Revenue Per User (EGP)",
+      "aggregates": ["AVG", "SUM", "SEGMENT"]
+    },
+    "Total_RPU": {
+      "type": "NUMERIC",
+      "format": "currency",
+      "description": "Total Revenue Per User including all services",
+      "aggregates": ["AVG", "SUM"]
+    },
+    "Tenure_Days": {
+      "type": "INTEGER",
+      "description": "Number of days as active subscriber",
+      "aggregates": ["AVG", "HISTOGRAM"]
+    },
+    "age": {
+      "type": "INTEGER",
+      "description": "Age of subscriber",
+      "range": [18, 80]
+    },
+    "Gender": {
+      "type": "VARCHAR",
+      "description": "Subscriber gender",
+      "values": ["M", "F", "U"]
+    },
+    "GOV": {
+      "type": "VARCHAR",
+      "description": "Governorate/Region code",
+      "values": ["Giza", "Cairo", "Alexandria", "Qalyubia"]
+    },
+    "PopName": {
+      "type": "VARCHAR",
+      "description": "Population segment (Urban, Suburban, Rural)",
+      "values": ["Urban", "Suburban", "Rural"]
+    },
+    "Subscriber_Status": {
+      "type": "VARCHAR",
+      "description": "Current subscription status",
+      "values": ["Active", "Suspended", "Dormant", "Churned"]
+    },
+    "Insertion_Date": {
+      "type": "DATE",
+      "description": "Record insertion date (use MAX for most recent)",
+      "indexed": true
+    }
+  },
+  "sample_query": "SELECT subs_id, ARPU, Current_Technology FROM analytic_models.Subscriber_Profile WHERE GOV='Giza' AND Insertion_Date=CURRENT_DATE",
+  "refresh_frequency": "daily"
+}

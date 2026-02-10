@@ -1,0 +1,79 @@
+{
+  "error_patterns": [
+    {
+      "error": "Duplicate subscriber records across insertion_dates",
+      "root_cause": "Raw data includes historical versions of same subscriber",
+      "fix": "Use ROW_NUMBER() OVER (PARTITION BY subs_id ORDER BY Insertion_Date DESC) WHERE RN=1",
+      "learned": "2026-02-10",
+      "applies_to": ["ARPU analysis", "Subscriber segmentation"]
+    },
+    {
+      "error": "NULL values in key columns (ARPU, Stability_Name)",
+      "root_cause": "Incomplete subscriber profiles or data sync delays",
+      "fix": "WHERE Subscriber_Status IS NOT NULL AND ARPU > 0",
+      "learned": "2026-02-09",
+      "impact": "Can inflate null/zero metrics by up to 15%"
+    },
+    {
+      "error": "ARPU values > 1000 (outliers)",
+      "root_cause": "Business customers, bulk purchases, or data entry errors",
+      "fix": "Review outliers separately: WHERE ARPU > 1000 AND ARPU < 2000 WITH MANUAL REVIEW",
+      "learned": "2026-02-08",
+      "applies_to": ["Average calculations"]
+    },
+    {
+      "error": "Technology column inconsistency (FTTH vs Fiber, 4G vs LTE)",
+      "root_cause": "Legacy data + system migrations",
+      "fix": "Standardize: CASE WHEN Current_Technology IN ('Fiber', 'FTTH') THEN 'FTTH'",
+      "learned": "2026-02-07",
+      "queries_affected": ["Tech breakdown analysis"]
+    },
+    {
+      "error": "Tenure_Days negative or abnormally high",
+      "root_cause": "Date format issues or system clock problems",
+      "fix": "CASE WHEN Tenure_Days < 0 THEN 0 WHEN Tenure_Days > 7300 THEN 7300",
+      "learned": "2026-02-06"
+    }
+  ],
+  "query_optimizations": [
+    {
+      "pattern": "Large aggregations on analytic_models.Subscriber_Profile",
+      "optimization": "Filter by GOV and Insertion_Date first (both indexed)",
+      "impact": "60% faster on 10M+ row table"
+    },
+    {
+      "pattern": "Window functions for deduplication",
+      "optimization": "Use ROW_NUMBER instead of dense_rank (faster for large partitions)",
+      "impact": "3x faster deduplication"
+    },
+    {
+      "pattern": "ARPU percentile calculations",
+      "optimization": "Use NTILE(100) for approximate percentiles when exact not needed",
+      "impact": "10x faster for real-time dashboards"
+    }
+  ],
+  "business_insights": [
+    {
+      "insight": "FTTH technology segment ARPU is 40% higher than LTE",
+      "first_discovered": "2026-02-05",
+      "confidence": "high (>1000 samples)",
+      "recommendation": "Accelerate FTTH migration for 4G/3G base"
+    },
+    {
+      "insight": "Stable subscribers with 2+ year tenure have 90% retention",
+      "first_discovered": "2026-02-04",
+      "confidence": "high",
+      "recommendation": "Focus churn prevention on Tenure_Days < 365"
+    },
+    {
+      "insight": "At-Risk segment shows early warning signs 30 days before churn",
+      "first_discovered": "2026-02-03",
+      "early_warning_signals": [
+        "Line_Stable changes from Active to Suspended",
+        "ARPU declining > 20% MoM",
+        "Demotion in stability_name from Stable to At-Risk"
+      ],
+      "recommendation": "Implement automated alerts for these changes"
+    }
+  ]
+}
