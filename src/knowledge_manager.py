@@ -91,14 +91,14 @@ class KnowledgeManager:
     
     def get_metric_definition(self, metric_name: str) -> Optional[Dict[str, Any]]:
         """Get business metric definition"""
-        telecom_metrics = self.business_rules.get('telecom_metrics', {})
-        metrics = telecom_metrics.get('metrics', {})
+        broadband_metrics = self.business_rules.get('broadband_metrics', {})
+        metrics = broadband_metrics.get('metrics', {})
         return metrics.get(metric_name)
     
     def get_data_quality_rules(self) -> List[str]:
         """Get data quality validation rules"""
-        telecom_metrics = self.business_rules.get('telecom_metrics', {})
-        return telecom_metrics.get('business_rules', {}).get('data_quality', [])
+        broadband_metrics = self.business_rules.get('broadband_metrics', {})
+        return broadband_metrics.get('business_rules', {}).get('data_quality', [])
     
     def get_error_patterns(self) -> Dict[str, Any]:
         """Get known error patterns and fixes"""
@@ -119,7 +119,7 @@ class KnowledgeManager:
         ])
         
         # Key metrics
-        metrics = self.business_rules.get('telecom_metrics', {}).get('metrics', {})
+        metrics = self.business_rules.get('broadband_metrics', {}).get('metrics', {})
         metrics_list = "\n".join([
             f"- {name}: {m.get('business_value', '')}"
             for name, m in metrics.items()
@@ -139,7 +139,7 @@ class KnowledgeManager:
         ])
         
         context = f"""
-=== TELECOM ANALYTICS KNOWLEDGE BASE ===
+=== FIXED BROADBAND ANALYTICS KNOWLEDGE BASE ===
 
 🗄️ DATA SOURCES:
 {table_schemas}
@@ -170,26 +170,31 @@ class QueryBuilder:
         
         question_lower = question.lower()
         
-        # Keyword-based pattern matching
+        # Keyword-based pattern matching for Fixed Broadband domain
         patterns = {
-            'arpu': 'PATTERN 2: ARPU by Technology Segment',
-            'technology': 'PATTERN 2: ARPU by Technology Segment',
-            'churn': 'PATTERN 3: Churn Risk Segmentation',
-            'risk': 'PATTERN 3: Churn Risk Segmentation',
-            'geography': 'PATTERN 4: Geography Performance Comparison',
-            'revenue': 'PATTERN 5: Revenue Concentration',
-            'ftth': 'PATTERN 6: FTTH Migration Opportunity',
-            'migration': 'PATTERN 6: FTTH Migration Opportunity',
-            'demographic': 'PATTERN 7: Demographic Segmentation',
-            'area': 'PATTERN 8: Population Density Analysis',
-            'population': 'PATTERN 8: Population Density Analysis'
+            'revenue': 'PATTERN 1: Total_RPU Analysis by Payment Type',
+            'payment': 'PATTERN 1: Total_RPU Analysis by Payment Type',
+            'outage': 'PATTERN 2: Service Reliability & Outage Analysis',
+            'tickets': 'PATTERN 2: Service Reliability & Outage Analysis',
+            'quality': 'PATTERN 2: Service Reliability & Outage Analysis',
+            'package': 'PATTERN 3: Package Distribution & Adoption',
+            'gsm': 'PATTERN 4: GSM Cross-sell Opportunity Analysis',
+            'cross-sell': 'PATTERN 4: GSM Cross-sell Opportunity Analysis',
+            'status': 'PATTERN 5: Subscriber Status Segmentation',
+            'active': 'PATTERN 5: Subscriber Status Segmentation',
+            'suspended': 'PATTERN 5: Subscriber Status Segmentation',
+            'gender': 'PATTERN 6: Demographic Segmentation',
+            'geographic': 'PATTERN 7: Geographic Performance by GOV',
+            'region': 'PATTERN 7: Geographic Performance by GOV',
+            'tenure': 'PATTERN 8: Subscriber Lifecycle Analysis',
+            'customer': 'PATTERN 5: Subscriber Status Segmentation'
         }
         
         for keyword, pattern_name in patterns.items():
             if keyword in question_lower:
                 return f"Use {pattern_name} from query patterns"
         
-        return "Use PATTERN 1: Latest subscriber data as base query"
+        return "Use PATTERN 0: Latest fixed broadband subscriber data as base query"
     
     def validate_query(self, sql: str) -> bool:
         """Check query against data quality rules"""

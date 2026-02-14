@@ -1,86 +1,72 @@
 {
-  "table_name": "analytic_models.Subscriber_Profile",
-  "description": "Giza subscribers master data with profitability and stability metrics",
+  "table_name": "fixed_broadband.subscriber_profile",
+  "description": "Fixed Broadband subscriber master data with service metrics and revenue indicators",
   "columns": {
-    "subs_id": {
+    "Subs_ID": {
       "type": "VARCHAR",
-      "description": "Unique subscriber ID",
+      "description": "Unique subscriber identifier",
       "indexed": true
     },
-    "Fixed_Customer_No": {
-      "type": "NUMERIC",
-      "description": "Fixed customer reference number",
+    "Service_Number_Trimmed": {
+      "type": "VARCHAR",
+      "description": "Service phone/account number (trimmed)",
       "indexed": true
     },
-    "Stability_Name": {
+    "Subscriber_Status": {
       "type": "VARCHAR",
-      "description": "Subscriber stability classification (e.g., Stable, Churner, At-Risk)",
-      "values": ["Stable", "At-Risk", "Churner", "Prospect"]
+      "description": "Current subscription status/lifecycle stage",
+      "values": ["Active", "Suspended", "Deactivated"]
     },
-    "Line_Stable": {
+    "Payment_Type": {
       "type": "VARCHAR",
-      "description": "Line stability status based on recent activity",
-      "values": ["Active", "Inactive", "Suspended", "Churned"]
+      "description": "Payment model for subscription",
+      "values": ["Prepaid", "Postpaid"]
     },
-    "Current_Technology": {
+    "TTS_Total_Tickets": {
+      "type": "INTEGER",
+      "description": "Total support tickets created for service issues",
+      "aggregates": ["SUM", "AVG", "MAX"]
+    },
+    "Count_Of_All_Outage": {
+      "type": "INTEGER",
+      "description": "Total count of service outages experienced",
+      "aggregates": ["SUM", "AVG", "MAX"]
+    },
+    "Current_Package_Name": {
       "type": "VARCHAR",
-      "description": "Current access technology (FTTH, LTE, 3G, ADSL, etc.)",
-      "values": ["FTTH", "LTE", "3G", "4G", "5G", "ADSL", "EDGE"]
-    },
-    "Avg_Monthly_Payment": {
-      "type": "NUMERIC",
-      "format": "currency",
-      "description": "Average monthly payment amount (EGP)",
-      "aggregates": ["SUM", "AVG", "MIN", "MAX"]
-    },
-    "ARPU": {
-      "type": "NUMERIC",
-      "format": "currency",
-      "description": "Average Revenue Per User (EGP)",
-      "aggregates": ["AVG", "SUM", "SEGMENT"]
+      "description": "Current service package subscription",
+      "values": ["Standard", "Premium", "Enterprise"]
     },
     "Total_RPU": {
       "type": "NUMERIC",
       "format": "currency",
-      "description": "Total Revenue Per User including all services",
-      "aggregates": ["AVG", "SUM"]
+      "description": "Total Revenue Per User including all services (EGP)",
+      "aggregates": ["AVG", "SUM", "SEGMENT"]
     },
     "Tenure_Days": {
       "type": "INTEGER",
       "description": "Number of days as active subscriber",
       "aggregates": ["AVG", "HISTOGRAM"]
     },
-    "age": {
-      "type": "INTEGER",
-      "description": "Age of subscriber",
-      "range": [18, 80]
-    },
     "Gender": {
       "type": "VARCHAR",
       "description": "Subscriber gender",
       "values": ["M", "F", "U"]
     },
+    "Has_GSM": {
+      "type": "VARCHAR",
+      "description": "Whether subscriber has GSM/mobile bundled service",
+      "values": ["Yes", "No"]
+    },
     "GOV": {
       "type": "VARCHAR",
-      "description": "Governorate/Region code",
-      "values": ["Giza", "Cairo", "Alexandria", "Qalyubia"]
-    },
-    "PopName": {
-      "type": "VARCHAR",
-      "description": "Population segment (Urban, Suburban, Rural)",
-      "values": ["Urban", "Suburban", "Rural"]
-    },
-    "Subscriber_Status": {
-      "type": "VARCHAR",
-      "description": "Current subscription status",
-      "values": ["Active", "Suspended", "Dormant", "Churned"]
-    },
-    "Insertion_Date": {
-      "type": "DATE",
-      "description": "Record insertion date (use MAX for most recent)",
+      "description": "Governorate/Geographic region code",
+      "values": ["Cairo", "Giza", "Alexandria", "Qalyubia", "Others"],
       "indexed": true
     }
   },
-  "sample_query": "SELECT subs_id, ARPU, Current_Technology FROM analytic_models.Subscriber_Profile WHERE GOV='Giza' AND Insertion_Date=CURRENT_DATE",
-  "refresh_frequency": "daily"
+  "sample_query": "SELECT Subs_ID, Subscriber_Status, Total_RPU, Current_Package_Name FROM fixed_broadband.subscriber_profile WHERE GOV='Cairo' AND Subscriber_Status='Active'",
+  "refresh_frequency": "daily",
+  "record_count_approx": 5000000,
+  "data_quality_notes": "Rolling refresh with daily transactions from broadband service system"
 }

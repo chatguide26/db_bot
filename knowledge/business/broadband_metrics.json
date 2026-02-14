@@ -1,0 +1,92 @@
+{
+  "metrics": {
+    "Total_RPU": {
+      "name": "Total Revenue Per User",
+      "formula": "SUM(Total_RPU) / COUNT(DISTINCT Subs_ID)",
+      "unit": "EGP",
+      "business_value": "Primary profitability indicator for broadband services",
+      "thresholds": {
+        "high": "> 500",
+        "normal": "300-500",
+        "low": "< 300"
+      },
+      "dimension_breakdown": [
+        "By Payment Type (Prepaid vs Postpaid)",
+        "By Package (Standard, Premium, Enterprise)",
+        "By Subscriber Status (Active > Suspended > Deactivated)",
+        "By Region (GOV distribution)"
+      ]
+    },
+    "Service_Quality": {
+      "name": "Service Quality Metrics",
+      "indicators": [
+        "Count_Of_All_Outage: Total number of service outages",
+        "TTS_Total_Tickets: Total support tickets and issues",
+        "avg_outages_per_subscriber: Reliability metric"
+      ],
+      "business_value": "Identifies service quality issues and SLA compliance",
+      "threshold": "Count_Of_All_Outage < 5 per month"
+    },
+    "Subscriber_Segmentation": {
+      "name": "Subscriber Lifecycle Stage",
+      "categories": {
+        "Active": "Active subscriptions receiving service, 70% of base",
+        "Suspended": "Temporarily suspended, payment or service issues, 20% of base",
+        "Deactivated": "Churned or terminated, 10% of base"
+      },
+      "business_value": "Segment for targeted engagement and retention strategies"
+    },
+    "Package_Distribution": {
+      "name": "Service Package Adoption",
+      "calculation": "% Subscribers per package type (Standard, Premium, Enterprise)",
+      "business_value": "Identifies upsell and cross-sell opportunities",
+      "goal": "Migrate 20% of Standard to Premium within 6 months"
+    },
+    "Revenue_Concentration": {
+      "name": "Dependency on Top Payment Types",
+      "calculation": "% Revenue concentration by Payment_Type",
+      "threshold_alert": "> 70% (concentration risk)",
+      "business_value": "Identify over-reliance on single payment model"
+    },
+    "GSM_Cross_Sell": {
+      "name": "GSM Services Cross-sell Opportunity",
+      "indicators": [
+        "Has_GSM = 'No': Potential cross-sell target",
+        "High Total_RPU subscribers: Best targets for GSM upgrade"
+      ],
+      "business_value": "Increase ARPU through bundled services",
+      "target_segment": "Active Premium subscribers without GSM"
+    }
+  },
+  "business_rules": {
+    "data_quality": [
+      "Total_RPU must be positive and <= 10000",
+      "Tenure_Days cannot be negative",
+      "Count_Of_All_Outage must be >= 0",
+      "Subscriber_Status must be (Active, Suspended, Deactivated)",
+      "Payment_Type must be (Prepaid, Postpaid)",
+      "Has_GSM must be (Yes, No)"
+    ],
+    "calculation_rules": [
+      "Always use latest record per subscriber",
+      "Filter WHERE Subscriber_Status IS NOT NULL",
+      "Revenue trends: compare same period YoY or MoM",
+      "Service quality: focus on active subscribers (exclude Deactivated)"
+    ],
+    "reporting_rules": [
+      "Always break down by Payment_Type",
+      "Package analysis: Current_Package_Name distribution",
+      "Geographic analysis: GOV (Governorate level)",
+      "Always include sample size and percentage change",
+      "Flag subscribers with > 10 outages as 'High Risk'"
+    ]
+  },
+  "definitions": {
+    "churn_rate": "% of subscribers that deactivate per period",
+    "retention_rate": "% of active subscribers from previous period still active",
+    "arpu": "Total_RPU / count (Average Revenue Per User)",
+    "growth_rate": "YoY or MoM percentage change in subscriber count",
+    "ltv": "Lifetime Value = ARPU * Average Customer Tenure (in years)",
+    "service_tier": "Package subscription level (Standard, Premium, Enterprise)"
+  }
+}
