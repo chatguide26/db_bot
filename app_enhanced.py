@@ -373,7 +373,7 @@ BASE_QUERY = """
 SELECT Subs_ID, Service_Number_Trimmed, Subscriber_Status,
        Payment_Type, TTS_Total_Tickets, Count_Of_All_Outage,
        Current_Package_Name, Total_RPU, Tenure_Days,
-       Gender, Has_GSM, GOV
+       Gender, Has_GSM, GOV, Active_Date
 FROM fixed_broadband.subscriber_profile
 WHERE GOV = '{gov}'
   AND Subscriber_Status IS NOT NULL
@@ -519,7 +519,8 @@ def build_column_embeddings(duckdb_conn) -> dict:
         "Tenure_Days": "Number of days since subscriber activation (customer lifetime)",
         "Gender": "Subscriber gender (Male or Female)",
         "Has_GSM": "Indicates whether the subscriber also has GSM mobile service (Yes or No)",
-        "GOV": "Governorate or geographic region where the subscriber is located"
+        "GOV": "Governorate or geographic region where the subscriber is located",
+        "Active_Date": "Date and time when the subscriber service was activated (used for time filtering, cohort analysis, and customer lifetime calculations)"
     }
     
     column_embeddings = {}
@@ -1258,7 +1259,7 @@ Based on the query results above:
         logger.info("📍 Fallback: Using understanding-based routing...")
         
         # STEP 1: LLM understands the question and identifies data needs (with caching)
-        understanding_prompt = f"""Given this fixed broadband database (broadband_subscribers table with: Subs_ID, Subscriber_Status, Payment_Type, TTS_Total_Tickets, Count_Of_All_Outage, Current_Package_Name, Total_RPU, Tenure_Days, Gender, Has_GSM, GOV, Service_Number_Trimmed):
+        understanding_prompt = f"""Given this fixed broadband database (broadband_subscribers table with: Subs_ID, Service_Number_Trimmed, Subscriber_Status, Payment_Type, TTS_Total_Tickets, Count_Of_All_Outage, Current_Package_Name, Total_RPU, Tenure_Days, Gender, Has_GSM, GOV, Active_Date):
 
 User asks: "{normalized_prompt}"
 

@@ -63,9 +63,15 @@
       "description": "Governorate/Geographic region code",
       "values": ["Cairo", "Giza", "Alexandria", "Qalyubia", "Others"],
       "indexed": true
+    },
+    "Active_Date": {
+      "type": "TIMESTAMP",
+      "description": "Date and time when the subscriber service was activated (used for time filtering, cohort analysis, and customer lifetime calculations)",
+      "indexed": true,
+      "aggregates": ["MIN", "MAX", "DATE_TRUNC"]
     }
   },
-  "sample_query": "SELECT Subs_ID, Subscriber_Status, Total_RPU, Current_Package_Name FROM fixed_broadband.subscriber_profile WHERE GOV='Cairo' AND Subscriber_Status='Active'",
+  "sample_query": "SELECT Subs_ID, Subscriber_Status, Total_RPU, Current_Package_Name, Active_Date FROM fixed_broadband.subscriber_profile WHERE GOV='Cairo' AND Subscriber_Status='Active'",
   "refresh_frequency": "daily",
   "record_count_approx": 5000000,
   "data_quality_notes": "Rolling refresh with daily transactions from broadband service system"
